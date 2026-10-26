@@ -161,11 +161,11 @@ export async function fetchLiveShopifyProducts(config = null) {
     // Map to high-res local image mirrors
     let image = node.images?.edges?.[0]?.node?.url;
     if (node.title.toLowerCase().includes('ancestral')) {
-      image = '/images/ghat-memorial.png';
+      image = '/images/ghat-memorial.webp';
     } else if (node.title.toLowerCase().includes('abhishek')) {
-      image = '/images/rudrabhishek.png';
+      image = '/images/rudrabhishek.webp';
     } else if (node.title.toLowerCase().includes('jal') || node.title.toLowerCase().includes('darshan')) {
-      image = '/images/sacred-kumbh.png';
+      image = '/images/sacred-kumbh.webp';
     }
 
     return {
@@ -229,9 +229,9 @@ export async function searchShopifyProducts(searchTerm, config = null) {
   const data = await storefrontApiRequest(query, { query: searchTerm }, config);
   return (data?.products?.edges || []).map(({ node }) => {
     const v = node.variants?.edges?.[0]?.node;
-    let image = node.images?.edges?.[0]?.node?.url || '/images/sacred-kumbh.png';
-    if (node.title.toLowerCase().includes('ancestral')) image = '/images/ghat-memorial.png';
-    else if (node.title.toLowerCase().includes('abhishek')) image = '/images/rudrabhishek.png';
+    let image = node.images?.edges?.[0]?.node?.url || '/images/sacred-kumbh.webp';
+    if (node.title.toLowerCase().includes('ancestral')) image = '/images/ghat-memorial.webp';
+    else if (node.title.toLowerCase().includes('abhishek')) image = '/images/rudrabhishek.webp';
 
     return {
       id: node.id,

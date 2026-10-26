@@ -36,7 +36,7 @@ export default function App() {
       handle: 'asset-pack-135166066690-example-product-3',
       price: '38.00',
       availableForSale: true,
-      image: '/images/sacred-kumbh.png',
+      image: '/images/sacred-kumbh.webp',
       description: 'Bring the divine energy of the Nashik Kumbh Mela directly into your home. Receive a securely sealed, sacred brass vessel of authentic Godavari water, collected during the most auspicious Kumbh bathing dates. Along with your holy water, we will send a recorded Darshan video to your WhatsApp, allowing you to experience the vibrant spiritual atmosphere of the ghats from anywhere in the country. Let the blessings of the Kumbh flow into your household.',
       variants: [{ id: 'gid://shopify/ProductVariant/45126575587379', title: 'Default Title', price: '38.00', availableForSale: true }]
     },
@@ -46,7 +46,7 @@ export default function App() {
       handle: 'asset-pack-135166066690-example-product-2',
       price: '68.00',
       availableForSale: true,
-      image: '/images/rudrabhishek.png',
+      image: '/images/rudrabhishek.webp',
       description: 'Participate in the Nashik Kumbh Mela without the travel or the crowds. Our verified pandits will perform a personalized Abhishek pooja directly on the holy ghats of Nashik. By uploading a photograph of yourself or your family, the priest ensures the blessings and mantras are directed specifically to you. The entire ritual will be recorded and sent to you via WhatsApp so you can witness your blessing, and a sacred bottle of Godavari Jal will be shipped securely to your doorstep.',
       variants: [{ id: 'gid://shopify/ProductVariant/45126575554611', title: 'Default Title', price: '68.00', availableForSale: true }]
     },
@@ -56,7 +56,7 @@ export default function App() {
       handle: 'asset-pack-135166066690-example-product-1',
       price: '48.00',
       availableForSale: true,
-      image: '/images/ghat-memorial.png',
+      image: '/images/ghat-memorial.webp',
       description: 'Honor the memory of your departed loved ones and seek spiritual peace for their souls, no matter where you are in the world. During the highly auspicious Nashik Kumbh Mela, our trusted priests will perform a dedicated Shanti Abhishek (peace ritual) on the serene banks of the Godavari River. Simply upload a photo of your loved one or pet, and the pooja will be deeply personalized for their journey. You will receive a complete video recording of the ritual via WhatsApp for your family to keep, alongside a shipped vessel of sacred holy water as a tangible blessing of peace for your home.',
       variants: [{ id: 'gid://shopify/ProductVariant/45126575456307', title: 'Default Title', price: '48.00', availableForSale: true }]
     }
@@ -441,7 +441,7 @@ export default function App() {
       {/* 2. Hero Section (Exact Match) */}
       <section 
         className="exact-hero"
-        style={{ backgroundImage: `url('/images/river-night-panorama.png')` }}
+        style={{ backgroundImage: `url('/images/river-night-panorama.webp')` }}
       >
         <div className="exact-hero-cta">
           <button onClick={scrollToProducts} className="btn-pill-dark">
@@ -456,8 +456,12 @@ export default function App() {
           <div className="story-card-grid">
             <div className="story-image-wrap">
               <img 
-                src="/images/real-river-panorama.jpg" 
+                src="/images/real-river-panorama.webp" 
                 alt="Heartfelt pooja ceremonies and authentic Gangajal" 
+                loading="lazy"
+                decoding="async"
+                width="600"
+                height="450"
               />
             </div>
             <div className="story-text-card">
@@ -504,7 +508,14 @@ export default function App() {
                 }}
               >
                 <div className="exact-product-image-wrap">
-                  <img src={prod.image} alt={prod.title} />
+                  <img 
+                    src={prod.image} 
+                    alt={prod.title} 
+                    loading="lazy"
+                    decoding="async"
+                    width="400"
+                    height="400"
+                  />
                 </div>
                 <h3 className="exact-product-title">{prod.title}</h3>
                 <div className="exact-product-price">
