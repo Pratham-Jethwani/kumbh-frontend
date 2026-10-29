@@ -179,26 +179,43 @@ button {
   justify-content: center;
 }
 
-/* Hero Section */
+/* Hero Section - Matching Shopify store --section-height-medium (65svh / ~550px) */
 .exact-hero {
   position: relative;
   width: 100%;
-  height: 90vh;
-  min-height: 600px;
+  height: 65svh;
+  min-height: 520px;
+  max-height: 580px;
   background-size: cover;
-  background-position: center;
+  background-position: center 25%;
   background-repeat: no-repeat;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 80px;
+  padding-bottom: 40px;
+}
+
+@media (max-width: 900px) {
+  .exact-hero {
+    height: 55svh;
+    min-height: 440px;
+    padding-bottom: 30px;
+  }
+}
+
+@media (max-width: 600px) {
+  .exact-hero {
+    height: 25rem;
+    min-height: 380px;
+    padding-bottom: 24px;
+  }
 }
 
 .exact-hero::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.3) 100%);
+  background: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.25) 100%);
   pointer-events: none;
 }
 
@@ -210,13 +227,13 @@ button {
 /* Two-column Story Card */
 .exact-story-section {
   background-color: var(--color-terracotta);
-  padding: 60px 0 80px;
+  padding: 40px 0 80px;
 }
 
 .story-card-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-radius: var(--radius-card);
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
 }
@@ -230,7 +247,7 @@ button {
 .story-image-wrap {
   width: 100%;
   height: 100%;
-  min-height: 440px;
+  min-height: 480px;
 }
 
 .story-image-wrap img {
@@ -252,7 +269,7 @@ button {
   font-size: clamp(1.8rem, 3.2vw, 2.5rem);
   font-weight: 700;
   line-height: 1.25;
-  color: #ffffff;
+  color: #391604;
   margin-bottom: 24px;
   letter-spacing: -0.01em;
 }
@@ -260,34 +277,27 @@ button {
 .story-text-card p {
   font-size: 1.05rem;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.9);
+  color: #391604;
+  opacity: 0.9;
 }
 
-/* Product Grid Section */
+/* Product Grid Section - Matching Shopify 4:5 Portrait Cards */
 .exact-products-section {
   background-color: var(--color-terracotta);
   padding: 20px 0 90px;
 }
 
 .exact-products-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
-}
-
-@media (max-width: 900px) {
-  .exact-products-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 600px) {
-  .exact-products-grid {
-    grid-template-columns: 1fr;
-  }
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 36px;
 }
 
 .exact-product-card {
+  flex: 1 1 360px;
+  max-width: 480px;
+  min-width: 280px;
   display: flex;
   flex-direction: column;
   cursor: pointer;
@@ -298,12 +308,13 @@ button {
   transform: translateY(-4px);
 }
 
+/* Exact Shopify portrait 4:5 aspect ratio and 8px border radius */
 .exact-product-image-wrap {
   width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: var(--radius-card);
+  aspect-ratio: 4 / 5;
+  border-radius: 8px;
   overflow: hidden;
-  background-color: #823816;
+  background-color: #7a3212;
   margin-bottom: 16px;
 }
 
@@ -316,7 +327,7 @@ button {
 }
 
 .exact-product-card:hover .exact-product-image-wrap img {
-  transform: scale(1.04);
+  transform: scale(1.03);
 }
 
 .exact-product-title {
@@ -357,11 +368,17 @@ button {
   margin-bottom: 36px;
 }
 
-/* Star Rating Quote Section */
+/* Star Rating Quote Section with Authentic Shopify Photo Background */
 .exact-quote-terracotta {
-  background-color: var(--color-terracotta);
-  padding: 90px 0;
+  position: relative;
+  background: linear-gradient(rgba(20, 10, 6, 0.72), rgba(20, 10, 6, 0.72)), url('/images/shopify-sec-1.webp') center/cover no-repeat;
+  color: #ffffff;
+  padding: 100px 0;
   text-align: center;
+  min-height: 50svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .quote-stars {
@@ -391,18 +408,47 @@ button {
   text-underline-offset: 4px;
 }
 
-/* Gold Sand Quote Section */
+/* Gold Sand Tapestry Section with Authentic Shopify Media-With-Content Layout */
 .exact-quote-sand {
   background-color: var(--color-sand-gold);
   color: #3b2210;
-  padding: 110px 0;
+  padding: 80px 0;
+}
+
+.tapestry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .tapestry-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+.tapestry-image-wrap {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  max-height: 520px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tapestry-image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .quote-sand-text {
-  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-size: clamp(2rem, 3.5vw, 3rem);
   font-weight: 800;
   line-height: 1.25;
-  max-width: 1080px;
   letter-spacing: -0.02em;
 }
 

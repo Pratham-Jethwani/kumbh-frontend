@@ -5,16 +5,18 @@ const SHOPIFY_CONFIG_KEY = 'kumbh_shopify_config';
 const CART_ID_KEY = 'nashik_shopify_cart_id';
 
 export const getStoredShopifyConfig = () => {
-  const envDomain = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || 'edsrux-pf.myshopify.com';
-  const envToken = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN || '';
-  const envVersion = import.meta.env.VITE_SHOPIFY_API_VERSION || '2024-07';
+  const envDomain = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SHOPIFY_STORE_DOMAIN) || 'edsrux-pf.myshopify.com';
+  const envToken = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SHOPIFY_STOREFRONT_TOKEN) || '';
+  const envVersion = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SHOPIFY_API_VERSION) || '2024-07';
 
   try {
-    const raw = localStorage.getItem(SHOPIFY_CONFIG_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed.shopDomain && parsed.storefrontAccessToken) {
-        return parsed;
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(SHOPIFY_CONFIG_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.shopDomain && parsed.storefrontAccessToken) {
+          return parsed;
+        }
       }
     }
   } catch (e) {
@@ -59,15 +61,91 @@ export async function storefrontApiRequest(query, variables = {}, config = null)
   return json.data;
 }
 
+export const REGIONS = {
+  IN: {
+    code: 'IN',
+    name: 'India',
+    currency: 'INR',
+    symbol: 'Rs. ',
+    shortSymbol: '₹',
+    flag: '🇮🇳',
+    desc: '2 Offerings: Sacred Godavari Jal & Live Personalized Abhishek'
+  },
+  US: {
+    code: 'US',
+    name: 'United States',
+    currency: 'USD',
+    symbol: '$',
+    shortSymbol: '$',
+    flag: '🇺🇸',
+    desc: '1 Offering: Ancestral Peace Abhishek & Kumbh Blessings'
+  }
+};
+
+export function getInstantDetectedCountry() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    if (
+      tz.includes('New_York') || 
+      tz.includes('Los_Angeles') || 
+      tz.includes('Chicago') || 
+      tz.includes('Denver') || 
+      tz.includes('America/') || 
+      tz.includes('US/') || 
+      tz.includes('Honolulu') || 
+      tz.includes('Anchorage')
+    ) {
+      return 'US';
+    }
+  } catch (e) {}
+  return 'IN';
+}
+
+export async function detectUserCountry() {
+  try {
+    const res = await fetch('https://api.country.is', { signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.country === 'US') return 'US';
+      if (data?.country) return data.country === 'US' ? 'US' : 'IN';
+    }
+  } catch (e) {
+    try {
+      const res2 = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(2500) });
+      if (res2.ok) {
+        const data2 = await res2.json();
+        if (data2?.country_code === 'US') return 'US';
+        if (data2?.country_code) return data2.country_code === 'US' ? 'US' : 'IN';
+      }
+    } catch (e2) {}
+  }
+  return getInstantDetectedCountry();
+}
+
+export function getStoredCountry() {
+  return getInstantDetectedCountry();
+}
+
 // 1. Fetch live product prices and inventory availability directly from Shopify
-export async function fetchLiveShopifyProducts(config = null) {
+export async function fetchLiveShopifyProducts(countryCode = null, config = null) {
+  const activeCountry = countryCode || getStoredCountry();
   // Query featured collection first to preserve exact store order, with fallback to all products
   const query = `
-    query getInventoryProducts {
+    query getInventoryProducts($country: CountryCode) @inContext(country: $country) {
       shop {
         name
         primaryDomain {
           url
+        }
+      }
+      localization {
+        country {
+          isoCode
+          name
+          currency {
+            isoCode
+            symbol
+          }
         }
       }
       collectionByHandle(handle: "asset-pack-135166066690-example-products") {
@@ -147,7 +225,7 @@ export async function fetchLiveShopifyProducts(config = null) {
     }
   `;
 
-  const data = await storefrontApiRequest(query, {}, config);
+  const data = await storefrontApiRequest(query, { country: activeCountry }, config);
   const collectionEdges = data?.collectionByHandle?.products?.edges || [];
   const fallbackEdges = data?.products?.edges || [];
   const edges = collectionEdges.length > 0 ? collectionEdges : fallbackEdges;
@@ -156,7 +234,8 @@ export async function fetchLiveShopifyProducts(config = null) {
     const rawVariants = node.variants?.edges?.map(e => e.node) || [];
     const firstVariant = rawVariants[0];
     const rawPrice = firstVariant?.price?.amount || '0.00';
-    const currency = firstVariant?.price?.currencyCode || 'INR';
+    const currency = firstVariant?.price?.currencyCode || (activeCountry === 'US' ? 'USD' : 'INR');
+    const currencySymbol = currency === 'USD' ? '$' : 'Rs. ';
 
     // Map to high-res local image mirrors
     let image = node.images?.edges?.[0]?.node?.url;
@@ -177,6 +256,7 @@ export async function fetchLiveShopifyProducts(config = null) {
       availableForSale: node.availableForSale,
       price: parseFloat(rawPrice).toFixed(2),
       currency,
+      currencySymbol,
       image,
       variants: rawVariants.map(v => ({
         id: v.id,
@@ -190,11 +270,12 @@ export async function fetchLiveShopifyProducts(config = null) {
 }
 
 // 2. Real-time Live Product Search API
-export async function searchShopifyProducts(searchTerm, config = null) {
+export async function searchShopifyProducts(searchTerm, countryCode = null, config = null) {
   if (!searchTerm || !searchTerm.trim()) return [];
+  const activeCountry = countryCode || getStoredCountry();
 
   const query = `
-    query searchCatalog($query: String!) {
+    query searchCatalog($query: String!, $country: CountryCode) @inContext(country: $country) {
       products(first: 10, query: $query) {
         edges {
           node {
@@ -226,19 +307,21 @@ export async function searchShopifyProducts(searchTerm, config = null) {
     }
   `;
 
-  const data = await storefrontApiRequest(query, { query: searchTerm }, config);
+  const data = await storefrontApiRequest(query, { query: searchTerm, country: activeCountry }, config);
   return (data?.products?.edges || []).map(({ node }) => {
     const v = node.variants?.edges?.[0]?.node;
     let image = node.images?.edges?.[0]?.node?.url || '/images/sacred-kumbh.webp';
     if (node.title.toLowerCase().includes('ancestral')) image = '/images/ghat-memorial.webp';
     else if (node.title.toLowerCase().includes('abhishek')) image = '/images/rudrabhishek.webp';
 
+    const curr = v?.price?.currencyCode || (activeCountry === 'US' ? 'USD' : 'INR');
     return {
       id: node.id,
       title: node.title,
       handle: node.handle,
       price: parseFloat(v?.price?.amount || '0').toFixed(2),
-      currency: v?.price?.currencyCode || 'INR',
+      currency: curr,
+      currencySymbol: curr === 'USD' ? '$' : 'Rs. ',
       image,
       variantId: v?.id
     };
@@ -246,14 +329,16 @@ export async function searchShopifyProducts(searchTerm, config = null) {
 }
 
 // 3. Shopify Storefront Cart Management (Create & Sync)
-export async function createShopifyCart(lines, config = null) {
+export async function createShopifyCart(lines, countryCode = null, config = null, customDetails = {}) {
+  const activeCountry = countryCode || getStoredCountry();
   const mutation = `
-    mutation cartCreate($input: CartInput!) {
+    mutation cartCreate($input: CartInput!, $country: CountryCode) @inContext(country: $country) {
       cartCreate(input: $input) {
         cart {
           id
           checkoutUrl
           totalQuantity
+          note
           cost {
             totalAmount {
               amount
@@ -297,9 +382,26 @@ export async function createShopifyCart(lines, config = null) {
     quantity: line.quantity
   }));
 
-  const data = await storefrontApiRequest(mutation, { input: { lines: formattedLines } }, config);
+  const input = {
+    lines: formattedLines
+  };
+
+  if (customDetails.attributes && customDetails.attributes.length > 0) {
+    input.attributes = customDetails.attributes;
+  }
+  if (customDetails.note) {
+    input.note = customDetails.note;
+  }
+  if (customDetails.buyerIdentity) {
+    input.buyerIdentity = customDetails.buyerIdentity;
+  }
+
+  const data = await storefrontApiRequest(mutation, { 
+    input,
+    country: activeCountry
+  }, config);
   const cart = data?.cartCreate?.cart;
-  if (cart?.id) {
+  if (cart?.id && typeof localStorage !== 'undefined') {
     localStorage.setItem(CART_ID_KEY, cart.id);
   }
   return cart;
@@ -415,8 +517,9 @@ export async function registerCustomerNewsletter(email, config = null) {
 }
 
 // 5. Checkout creation helper
-export async function createShopifyCheckout(cartItems, config = null) {
+export async function createShopifyCheckout(cartItems, countryCode = null, config = null, customDetails = {}) {
   const cfg = config || getStoredShopifyConfig();
+  const activeCountry = countryCode || getStoredCountry();
   const lines = cartItems.map(item => ({
     variantId: item.variant?.id || item.product?.variants?.[0]?.id,
     quantity: item.quantity
@@ -430,7 +533,7 @@ export async function createShopifyCheckout(cartItems, config = null) {
   }
 
   try {
-    const cart = await createShopifyCart(lines, cfg);
+    const cart = await createShopifyCart(lines, activeCountry, cfg, customDetails);
     if (cart?.checkoutUrl) {
       return {
         success: true,
@@ -448,10 +551,11 @@ export async function createShopifyCheckout(cartItems, config = null) {
 }
 
 // 6. Direct Instant "Buy It Now" Checkout (one-click to Shopify checkout)
-export async function instantBuyNow(variantId, quantity = 1, config = null) {
+export async function instantBuyNow(variantId, quantity = 1, countryCode = null, config = null, customDetails = {}) {
   const cfg = config || getStoredShopifyConfig();
+  const activeCountry = countryCode || getStoredCountry();
   try {
-    const cart = await createShopifyCart([{ variantId, quantity }], cfg);
+    const cart = await createShopifyCart([{ variantId, quantity }], activeCountry, cfg, customDetails);
     if (cart?.checkoutUrl) {
       return cart.checkoutUrl;
     }

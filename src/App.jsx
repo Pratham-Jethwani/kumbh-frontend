@@ -25,42 +25,65 @@ import {
   createShopifyCheckout, 
   instantBuyNow,
   registerCustomerNewsletter,
-  getStoredShopifyConfig 
+  getStoredShopifyConfig,
+  REGIONS,
+  getInstantDetectedCountry,
+  detectUserCountry
 } from './shopify';
+import ProductCheckout from './components/ProductCheckout';
 
 export default function App() {
-  const [products, setProducts] = useState([
-    {
-      id: 'gid://shopify/Product/8023516217395',
-      title: 'Sacred Godavari Jal & Kumbh Darshan Experience',
-      handle: 'asset-pack-135166066690-example-product-3',
-      price: '38.00',
-      availableForSale: true,
-      image: '/images/sacred-kumbh.webp',
-      description: 'Bring the divine energy of the Nashik Kumbh Mela directly into your home. Receive a securely sealed, sacred brass vessel of authentic Godavari water, collected during the most auspicious Kumbh bathing dates. Along with your holy water, we will send a recorded Darshan video to your WhatsApp, allowing you to experience the vibrant spiritual atmosphere of the ghats from anywhere in the country. Let the blessings of the Kumbh flow into your household.',
-      variants: [{ id: 'gid://shopify/ProductVariant/45126575587379', title: 'Default Title', price: '38.00', availableForSale: true }]
-    },
-    {
-      id: 'gid://shopify/Product/8023516184627',
-      title: 'Live Personalized Kumbh Abhishek & Holy Jal',
-      handle: 'asset-pack-135166066690-example-product-2',
-      price: '68.00',
-      availableForSale: true,
-      image: '/images/rudrabhishek.webp',
-      description: 'Participate in the Nashik Kumbh Mela without the travel or the crowds. Our verified pandits will perform a personalized Abhishek pooja directly on the holy ghats of Nashik. By uploading a photograph of yourself or your family, the priest ensures the blessings and mantras are directed specifically to you. The entire ritual will be recorded and sent to you via WhatsApp so you can witness your blessing, and a sacred bottle of Godavari Jal will be shipped securely to your doorstep.',
-      variants: [{ id: 'gid://shopify/ProductVariant/45126575554611', title: 'Default Title', price: '68.00', availableForSale: true }]
-    },
-    {
-      id: 'gid://shopify/Product/8023516086323',
-      title: 'Ancestral Peace Abhishek & Kumbh Blessings',
-      handle: 'asset-pack-135166066690-example-product-1',
-      price: '48.00',
-      availableForSale: true,
-      image: '/images/ghat-memorial.webp',
-      description: 'Honor the memory of your departed loved ones and seek spiritual peace for their souls, no matter where you are in the world. During the highly auspicious Nashik Kumbh Mela, our trusted priests will perform a dedicated Shanti Abhishek (peace ritual) on the serene banks of the Godavari River. Simply upload a photo of your loved one or pet, and the pooja will be deeply personalized for their journey. You will receive a complete video recording of the ritual via WhatsApp for your family to keep, alongside a shipped vessel of sacred holy water as a tangible blessing of peace for your home.',
-      variants: [{ id: 'gid://shopify/ProductVariant/45126575456307', title: 'Default Title', price: '48.00', availableForSale: true }]
+  const [currentCountry, setCurrentCountry] = useState(getInstantDetectedCountry());
+  const [isGeoVerified, setIsGeoVerified] = useState(false);
+  const [isCheckoutPageActive, setIsCheckoutPageActive] = useState(false);
+  const [checkoutTarget, setCheckoutTarget] = useState(null);
+
+  const initialProductsForCountry = (country) => {
+    if (country === 'US') {
+      return [
+        {
+          id: 'gid://shopify/Product/8023516086323',
+          title: 'Ancestral Peace Abhishek & Kumbh Blessings',
+          handle: 'asset-pack-135166066690-example-product-1',
+          price: '1.00',
+          currency: 'USD',
+          currencySymbol: '$',
+          availableForSale: true,
+          image: '/images/ghat-memorial.webp',
+          description: 'Honor the memory of your departed loved ones and seek spiritual peace for their souls, no matter where you are in the world. During the highly auspicious Nashik Kumbh Mela, our trusted priests will perform a dedicated Shanti Abhishek (peace ritual) on the serene banks of the Godavari River. Simply upload a photo of your loved one or pet, and the pooja will be deeply personalized for their journey. You will receive a complete video recording of the ritual via WhatsApp for your family to keep, alongside a shipped vessel of sacred holy water as a tangible blessing of peace for your home.',
+          variants: [{ id: 'gid://shopify/ProductVariant/45126575456307', title: 'Default Title', price: '1.00', availableForSale: true }]
+        }
+      ];
     }
-  ]);
+    return [
+      {
+        id: 'gid://shopify/Product/8023516217395',
+        title: 'Sacred Godavari Jal & Kumbh Darshan Experience',
+        handle: 'asset-pack-135166066690-example-product-3',
+        price: '38.00',
+        currency: 'INR',
+        currencySymbol: 'Rs. ',
+        availableForSale: true,
+        image: '/images/sacred-kumbh.webp',
+        description: 'Bring the divine energy of the Nashik Kumbh Mela directly into your home. Receive a securely sealed, sacred brass vessel of authentic Godavari water, collected during the most auspicious Kumbh bathing dates. Along with your holy water, we will send a recorded Darshan video to your WhatsApp, allowing you to experience the vibrant spiritual atmosphere of the ghats from anywhere in the country. Let the blessings of the Kumbh flow into your household.',
+        variants: [{ id: 'gid://shopify/ProductVariant/45126575587379', title: 'Default Title', price: '38.00', availableForSale: true }]
+      },
+      {
+        id: 'gid://shopify/Product/8023516184627',
+        title: 'Live Personalized Kumbh Abhishek & Holy Jal',
+        handle: 'asset-pack-135166066690-example-product-2',
+        price: '68.00',
+        currency: 'INR',
+        currencySymbol: 'Rs. ',
+        availableForSale: true,
+        image: '/images/rudrabhishek.webp',
+        description: 'Participate in the Nashik Kumbh Mela without the travel or the crowds. Our verified pandits will perform a personalized Abhishek pooja directly on the holy ghats of Nashik. By uploading a photograph of yourself or your family, the priest ensures the blessings and mantras are directed specifically to you. The entire ritual will be recorded and sent to you via WhatsApp so you can witness your blessing, and a sacred bottle of Godavari Jal will be shipped securely to your doorstep.',
+        variants: [{ id: 'gid://shopify/ProductVariant/45126575554611', title: 'Default Title', price: '68.00', availableForSale: true }]
+      }
+    ];
+  };
+
+  const [products, setProducts] = useState(() => initialProductsForCountry(getInstantDetectedCountry()));
 
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -96,17 +119,41 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState('');
 
   const config = getStoredShopifyConfig();
+  const activeRegion = REGIONS[currentCountry] || REGIONS.IN;
+  const currencySymbol = activeRegion.symbol;
 
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
   };
 
+  // Automatically verify customer's region via IP Geolocation (cannot be changed manually)
+  useEffect(() => {
+    let isMounted = true;
+    async function verifyRegion() {
+      try {
+        const detected = await detectUserCountry();
+        if (isMounted) {
+          if (detected !== currentCountry) {
+            setCurrentCountry(detected);
+            setCartItems([]);
+            setProducts(initialProductsForCountry(detected));
+          }
+          setIsGeoVerified(true);
+        }
+      } catch (e) {
+        if (isMounted) setIsGeoVerified(true);
+      }
+    }
+    verifyRegion();
+    return () => { isMounted = false; };
+  }, []);
+
   // Sync live prices and availability directly from Shopify inventory
   useEffect(() => {
     async function syncFromShopify() {
       try {
-        const liveProducts = await fetchLiveShopifyProducts();
+        const liveProducts = await fetchLiveShopifyProducts(currentCountry);
         if (liveProducts && liveProducts.length > 0) {
           setProducts(liveProducts);
           setIsInventorySynced(true);
@@ -122,9 +169,9 @@ export default function App() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [currentCountry]);
 
-  // Handle live search
+  // Handle live search with country inContext
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -133,7 +180,7 @@ export default function App() {
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const results = await searchShopifyProducts(searchQuery);
+        const results = await searchShopifyProducts(searchQuery, currentCountry);
         setSearchResults(results);
       } catch (e) {
         console.error('Search error:', e);
@@ -142,7 +189,7 @@ export default function App() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, currentCountry]);
 
   const totalCartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
 
@@ -164,20 +211,68 @@ export default function App() {
     setModalQuantity(1);
   };
 
-  const handleInstantBuyNow = async (product, variant = null, quantity = 1) => {
+  // Initiates the dedicated ritual checkout page for a specific product
+  const startCheckoutForProduct = (product, variant = null, quantity = 1) => {
     const activeVariant = variant || product.variants?.[0] || { id: product.id, title: 'Default Title', price: product.price };
-    setIsBuyingNow(true);
+    setCheckoutTarget({
+      product,
+      variant: activeVariant,
+      quantity,
+      allCartItems: null
+    });
+    setIsCheckoutPageActive(true);
+    setSelectedProduct(null);
+    setIsCartOpen(false);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  // Initiates checkout for cart items through dedicated checkout
+  const handleOpenCartCheckout = () => {
+    if (cartItems.length === 0) return;
+    const primary = cartItems[0];
+    setCheckoutTarget({
+      product: primary.product,
+      variant: primary.variant,
+      quantity: primary.quantity,
+      allCartItems: cartItems
+    });
+    setIsCheckoutPageActive(true);
+    setIsCartOpen(false);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  // Submits the dedicated checkout with WhatsApp, photo, and devotee details attached
+  const handleCompleteDedicatedCheckout = async (checkoutData) => {
+    setIsCheckingOut(true);
     try {
-      const checkoutUrl = await instantBuyNow(activeVariant.id, quantity);
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
+      const items = checkoutTarget?.allCartItems || [
+        {
+          product: checkoutTarget.product,
+          variant: checkoutTarget.variant,
+          quantity: checkoutTarget.quantity
+        }
+      ];
+
+      const res = await createShopifyCheckout(
+        items,
+        currentCountry,
+        config,
+        checkoutData.customDetails
+      );
+
+      if (res?.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
       }
     } catch (e) {
-      console.error('Instant checkout error:', e);
+      console.error('Dedicated checkout submission error:', e);
       window.location.href = `https://${config.shopDomain}/cart`;
     } finally {
-      setIsBuyingNow(false);
+      setIsCheckingOut(false);
     }
+  };
+
+  const handleInstantBuyNow = (product, variant = null, quantity = 1) => {
+    startCheckoutForProduct(product, variant, quantity);
   };
 
   const handleUpdateQty = (idx, qty) => {
@@ -205,20 +300,8 @@ export default function App() {
     }, 1200);
   };
 
-  // Connects Checkout button directly to Shopify Storefront API cartCreate checkoutUrl
-  const handleCheckout = async () => {
-    setIsCheckingOut(true);
-    try {
-      const res = await createShopifyCheckout(cartItems);
-      if (res?.checkoutUrl) {
-        window.location.href = res.checkoutUrl;
-      }
-    } catch (e) {
-      console.error('Checkout error:', e);
-      window.location.href = `https://${config.shopDomain}/cart`;
-    } finally {
-      setIsCheckingOut(false);
-    }
+  const handleCheckout = () => {
+    handleOpenCartCheckout();
   };
 
   // Connects Newsletter to Shopify Customer API customerCreate
@@ -259,6 +342,24 @@ export default function App() {
   };
 
   const cartSubtotal = cartItems.reduce((acc, i) => acc + (parseFloat(i.variant.price || i.product.price) * i.quantity), 0);
+
+  // Dedicated Product Checkout Page View
+  if (isCheckoutPageActive && checkoutTarget?.product) {
+    return (
+      <ProductCheckout 
+        product={checkoutTarget.product}
+        quantity={checkoutTarget.quantity || 1}
+        currentCountry={currentCountry}
+        currencySymbol={currencySymbol}
+        onBack={() => {
+          setIsCheckoutPageActive(false);
+          setCheckoutTarget(null);
+        }}
+        onCompleteCheckout={handleCompleteDedicatedCheckout}
+        isProcessing={isCheckingOut}
+      />
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -320,14 +421,15 @@ export default function App() {
         </button>
 
         <div className="header-actions">
-          {/* Currency button -> Opens Live Currency & Region Selector */}
+          {/* Automatic Verified Region Indicator (Read-only, auto-detected) */}
           <button 
             className="header-currency"
             onClick={() => setIsCurrencyModalOpen(true)}
-            title="Shopify Store Currency & Region"
+            title={`Region automatically verified as ${activeRegion.name} via Geolocation`}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
-            <span>INR / EN</span>
-            <ChevronDown size={14} />
+            <MapPin size={13} color="var(--color-terracotta)" />
+            <span>{activeRegion.flag} {activeRegion.name} ({activeRegion.shortSymbol})</span>
           </button>
 
           {/* Search Button -> Opens Live Storefront Search */}
@@ -428,7 +530,7 @@ export default function App() {
                     <img src={res.image} alt={res.title} style={{ width: '50px', height: '50px', borderRadius: '6px', objectFit: 'cover' }} />
                     <div>
                       <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{res.title}</div>
-                      <div style={{ fontSize: '0.82rem', color: 'var(--color-terracotta)' }}>Rs. {res.price}</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--color-terracotta)' }}>{currencySymbol}{res.price}</div>
                     </div>
                   </div>
                 ))}
@@ -466,7 +568,7 @@ export default function App() {
             </div>
             <div className="story-text-card">
               <h2>
-                Experience heartfelt pooja ceremonies and authentic Gangajal, delivered with wherever your family gathers.
+                Experience heartfelt pooja ceremonies and authentic Gangajal, delivered with warmth and reverence wherever your family gathers.
               </h2>
               <p>
                 Born from a desire to keep ancestral traditions alive, we bridge continents by connecting your family to meaningful rituals and spiritual comfort.
@@ -493,7 +595,9 @@ export default function App() {
                 boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
               }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }}></span>
-                Live Inventory Synced with Shopify Storefront API
+                {currentCountry === 'US' 
+                  ? 'United States Market • 1 Exclusive Offering Synced' 
+                  : 'India Market • 2 Exclusive Offerings Synced'}
               </span>
             )}
           </div>
@@ -511,21 +615,46 @@ export default function App() {
                   <img 
                     src={prod.image} 
                     alt={prod.title} 
-                    loading="lazy"
+                    loading="eager"
                     decoding="async"
-                    width="400"
-                    height="400"
+                    width="480"
+                    height="600"
                   />
                 </div>
                 <h3 className="exact-product-title">{prod.title}</h3>
                 <div className="exact-product-price">
-                  Rs. {prod.price}
+                  {currencySymbol}{prod.price}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.7)', marginTop: '4px' }}>
                   {prod.availableForSale ? 'In stock • Ready for dispatch' : 'Out of stock'}
                 </div>
 
-                <div style={{ marginTop: '14px' }}>
+                <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startCheckoutForProduct(prod, null, 1);
+                    }}
+                    disabled={!prod.availableForSale}
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(38, 17, 8, 0.95) 0%, rgba(55, 23, 10, 0.95) 100%)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      padding: '10px 18px',
+                      borderRadius: '9999px',
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      width: '100%',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                  >
+                    Book Ritual & Checkout • {currencySymbol}{prod.price}
+                  </button>
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -533,21 +662,21 @@ export default function App() {
                     }}
                     disabled={!prod.availableForSale}
                     style={{
-                      background: 'rgba(38, 17, 8, 0.85)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
                       padding: '8px 16px',
                       borderRadius: '9999px',
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       width: '100%'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#261108'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(38, 17, 8, 0.85)'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.22)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'}
                   >
-                    Add to cart • Rs. {prod.price}
+                    + Add to Cart
                   </button>
                 </div>
               </div>
@@ -588,12 +717,26 @@ export default function App() {
         </div>
       </section>
 
-      {/* 7. Section 6: Golden Sand Tapestry Quote (Exact Match) */}
+      {/* 7. Section 6: Golden Sand Tapestry Quote & Media (Exact Match) */}
       <section className="exact-quote-sand">
         <div className="site-container">
-          <p className="quote-sand-text">
-            Each ceremony is a tapestry of memory and meaning — woven for modern life, yet rooted in centuries of reverence and togetherness.
-          </p>
+          <div className="tapestry-grid">
+            <div className="tapestry-image-wrap">
+              <img 
+                src="/images/shopify-sec-2.webp" 
+                alt="Family lighting prayer diya together"
+                loading="lazy"
+                decoding="async"
+                width="688"
+                height="384"
+              />
+            </div>
+            <div>
+              <p className="quote-sand-text">
+                Each ceremony is a tapestry of memory and meaning — woven for modern life, yet rooted in centuries of reverence and togetherness.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -634,7 +777,7 @@ export default function App() {
                   {selectedProduct.title}
                 </h2>
                 <div style={{ fontSize: '1.35rem', fontWeight: 600, color: 'var(--color-terracotta)', marginBottom: '8px' }}>
-                  Rs. {selectedProduct.price}
+                  {currencySymbol}{selectedProduct.price}
                 </div>
                 <div style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 600, marginBottom: '16px' }}>
                   ✓ {selectedProduct.availableForSale ? 'Available in Shopify Inventory' : 'Sold Out'}
@@ -683,12 +826,12 @@ export default function App() {
                     className="btn-pill-dark"
                     style={{ width: '100%', padding: '14px', fontSize: '1.02rem', opacity: selectedProduct.availableForSale ? 1 : 0.6 }}
                   >
-                    {selectedProduct.availableForSale ? `Add to cart • Rs. ${(parseFloat(selectedProduct.price) * modalQuantity).toFixed(2)}` : 'Out of Stock'}
+                    {selectedProduct.availableForSale ? `Add to cart • ${currencySymbol}${(parseFloat(selectedProduct.price) * modalQuantity).toFixed(2)}` : 'Out of Stock'}
                   </button>
 
                   <button 
                     onClick={() => handleInstantBuyNow(selectedProduct, null, modalQuantity)}
-                    disabled={!selectedProduct.availableForSale || isBuyingNow}
+                    disabled={!selectedProduct.availableForSale}
                     style={{
                       width: '100%',
                       padding: '14px',
@@ -706,14 +849,7 @@ export default function App() {
                       opacity: selectedProduct.availableForSale ? 1 : 0.6
                     }}
                   >
-                    {isBuyingNow ? (
-                      <>
-                        <Loader2 size={18} className="flame-anim" />
-                        <span>Redirecting to Checkout...</span>
-                      </>
-                    ) : (
-                      'Buy it now'
-                    )}
+                    Proceed to Dedicated Checkout →
                   </button>
                 </div>
 
@@ -763,7 +899,7 @@ export default function App() {
                     <img src={item.product.image} alt={item.product.title} style={{ width: '70px', height: '70px', borderRadius: '8px', objectFit: 'cover' }} />
                     <div style={{ flexGrow: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '4px' }}>{item.product.title}</div>
-                      <div style={{ color: '#4b5563', fontSize: '0.9rem', marginBottom: '8px' }}>Rs. {item.variant.price || item.product.price}</div>
+                      <div style={{ color: '#4b5563', fontSize: '0.9rem', marginBottom: '8px' }}>{currencySymbol}{item.variant.price || item.product.price}</div>
                       
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{
@@ -797,7 +933,7 @@ export default function App() {
               <div style={{ padding: '24px', borderTop: '1px solid #e5e7eb', background: '#fafafa' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px' }}>
                   <span>Subtotal</span>
-                  <span>Rs. {cartSubtotal.toFixed(2)}</span>
+                  <span>{currencySymbol}{cartSubtotal.toFixed(2)}</span>
                 </div>
                 <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '16px' }}>
                   Taxes and shipping calculated at checkout
@@ -823,38 +959,62 @@ export default function App() {
         </div>
       )}
 
-      {/* Currency & Region Modal */}
+      {/* Verified Region & Catalog Information Modal (Read-only, locked) */}
       {isCurrencyModalOpen && (
         <div className="modal-overlay" onClick={() => setIsCurrencyModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: '480px', padding: '32px' }} onClick={e => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: '500px', padding: '32px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Country & Currency</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MapPin size={22} color="var(--color-terracotta)" />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Verified Region: {activeRegion.name}</h3>
+              </div>
               <button onClick={() => setIsCurrencyModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.95rem' }}>
-              <div style={{ padding: '16px', border: '2px solid var(--color-terracotta)', borderRadius: '10px', background: 'rgba(158, 73, 34, 0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: 700 }}>India (INR ₹)</span>
-                  <span style={{ fontSize: '0.8rem', background: 'var(--color-terracotta)', color: '#fff', padding: '2px 8px', borderRadius: '9999px' }}>Default Store Currency</span>
+              {/* Active Region Card */}
+              <div style={{ 
+                padding: '18px', 
+                border: '2px solid var(--color-terracotta)', 
+                borderRadius: '12px', 
+                background: 'rgba(158, 73, 34, 0.06)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '1.6rem' }}>{activeRegion.flag}</span>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{activeRegion.name}</span>
+                  </div>
+                  <span style={{ 
+                    fontSize: '0.78rem', 
+                    background: '#15803d', 
+                    color: '#fff', 
+                    padding: '3px 10px', 
+                    borderRadius: '9999px', 
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <Check size={12} /> Auto-Verified
+                  </span>
                 </div>
-                <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>
-                  All prices are synced directly in Indian Rupees (INR) from your Shopify inventory backend.
+                <p style={{ color: '#4b5563', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
+                  {activeRegion.desc}. All prices and ritual bookings are strictly locked in <strong>{activeRegion.currency} ({activeRegion.shortSymbol})</strong>.
                 </p>
               </div>
 
-              <div style={{ padding: '16px', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
-                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Storefront Localization</div>
-                <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>
-                  Language: English (EN) • Region: Nashik, Maharashtra, India
-                </p>
+              {/* Security / Fulfillment Policy Notice */}
+              <div style={{ padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: '10px', background: '#f9fafb' }}>
+                <div style={{ fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.6 }}>
+                  🔒 <strong>Region-Locked Fulfillment:</strong> To comply with international courier customs, Vedic priest Sankalpa assignments, and localized delivery timelines, customers are automatically connected to their verified geographic region. Region switching is restricted to ensure authentic and reliable order delivery.
+                </div>
               </div>
             </div>
 
             <button onClick={() => setIsCurrencyModalOpen(false)} className="btn-pill-dark" style={{ marginTop: '24px', width: '100%', padding: '12px' }}>
-              Confirm & Close
+              Understood
             </button>
           </div>
         </div>
