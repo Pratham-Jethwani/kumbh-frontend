@@ -102,6 +102,12 @@ export function getInstantDetectedCountry() {
 }
 
 export async function detectUserCountry() {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const queryCountry = params.get('country');
+    if (queryCountry) return queryCountry.toUpperCase() === 'US' ? 'US' : 'IN';
+  }
+
   try {
     const res = await fetch('https://api.country.is', { signal: AbortSignal.timeout(2500) });
     if (res.ok) {
@@ -120,6 +126,65 @@ export async function detectUserCountry() {
     } catch (e2) {}
   }
   return getInstantDetectedCountry();
+}
+
+import { 
+  REGION_LANGUAGE_MAP, 
+  FALLBACK_LANGUAGES, 
+  LANGUAGE_DISPLAY_NAMES,
+  LANGUAGE_TO_PRIMARY_STATE,
+  getAllowedLanguagesForState 
+} from './utils/regionLanguageMap';
+
+export const STATE_LANGUAGE_MAP = REGION_LANGUAGE_MAP;
+export const LANGUAGE_LABELS = LANGUAGE_DISPLAY_NAMES;
+export { FALLBACK_LANGUAGES, getAllowedLanguagesForState, LANGUAGE_TO_PRIMARY_STATE };
+
+export async function detectUserStateAndCountry() {
+  if (typeof window !== 'undefined') {
+    // 1. URL parameter override for instant testing (?state=GJ or ?state=MH or ?lang=ml or ?country=US)
+    const params = new URLSearchParams(window.location.search);
+    const queryCountry = params.get('country');
+    let queryState = params.get('state') || params.get('region');
+    const queryLang = params.get('lang')?.toLowerCase();
+
+    if (!queryState && queryLang && LANGUAGE_TO_PRIMARY_STATE[queryLang]) {
+      queryState = LANGUAGE_TO_PRIMARY_STATE[queryLang];
+    }
+
+    if (queryCountry || queryState || queryLang) {
+      const c = queryCountry ? (queryCountry.toUpperCase() === 'US' ? 'US' : 'IN') : 'IN';
+      const code = queryState ? queryState.toUpperCase() : '';
+      if (code) document.cookie = `detected-region=${code}; path=/; max-age=86400`;
+      return { country: c, stateCode: code, lang: queryLang };
+    }
+
+    // 2. Cookie override set by middleware or test switcher
+    const cookieMatch = document.cookie.match(/(?:^|;\s*)detected-region=([^;]*)/);
+    if (cookieMatch && cookieMatch[1]) {
+      return { country: 'IN', stateCode: cookieMatch[1].toUpperCase() };
+    }
+  }
+
+  try {
+    const res = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(2500) });
+    if (res.ok) {
+      const data = await res.json();
+      const country = data?.country_code === 'US' ? 'US' : 'IN';
+      const stateCode = data?.region_code || '';
+      return { country, stateCode };
+    }
+  } catch (e) {
+    try {
+      const res2 = await fetch('https://api.country.is', { signal: AbortSignal.timeout(2500) });
+      if (res2.ok) {
+        const data2 = await res2.json();
+        const country2 = data2?.country === 'US' ? 'US' : 'IN';
+        return { country: country2, stateCode: '' };
+      }
+    } catch (e2) {}
+  }
+  return { country: getInstantDetectedCountry(), stateCode: '' };
 }
 
 export function getStoredCountry() {

@@ -28,12 +28,19 @@ import {
   getStoredShopifyConfig,
   REGIONS,
   getInstantDetectedCountry,
-  detectUserCountry
+  detectUserCountry,
+  detectUserStateAndCountry,
+  STATE_LANGUAGE_MAP,
+  FALLBACK_LANGUAGES
 } from './shopify';
 import ProductCheckout from './components/ProductCheckout';
+import LanguageDropdown from './components/LanguageDropdown';
+import { getTranslation, getLocalizedProduct } from './translations';
 
 export default function App() {
   const [currentCountry, setCurrentCountry] = useState(getInstantDetectedCountry());
+  const [detectedState, setDetectedState] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [isGeoVerified, setIsGeoVerified] = useState(false);
   const [isCheckoutPageActive, setIsCheckoutPageActive] = useState(false);
   const [checkoutTarget, setCheckoutTarget] = useState(null);
@@ -127,17 +134,29 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  // Automatically verify customer's region via IP Geolocation (cannot be changed manually)
+  // Automatically verify customer's region & Indian state via IP Geolocation
   useEffect(() => {
     let isMounted = true;
     async function verifyRegion() {
       try {
-        const detected = await detectUserCountry();
+        const { country, stateCode } = await detectUserStateAndCountry();
         if (isMounted) {
-          if (detected !== currentCountry) {
-            setCurrentCountry(detected);
+          setDetectedState(stateCode || '');
+          const allowed = STATE_LANGUAGE_MAP[stateCode] || FALLBACK_LANGUAGES;
+          const params = new URLSearchParams(window.location.search);
+          const queryLang = params.get('lang')?.toLowerCase();
+          if (queryLang) {
+            setSelectedLanguage(queryLang);
+          } else if (stateCode && allowed[1]) {
+            setSelectedLanguage(allowed[1]);
+          } else if (!allowed.includes(selectedLanguage)) {
+            setSelectedLanguage(allowed[1] || allowed[0]);
+          }
+
+          if (country !== currentCountry) {
+            setCurrentCountry(country);
             setCartItems([]);
-            setProducts(initialProductsForCountry(detected));
+            setProducts(initialProductsForCountry(country));
           }
           setIsGeoVerified(true);
         }
@@ -343,6 +362,10 @@ export default function App() {
 
   const cartSubtotal = cartItems.reduce((acc, i) => acc + (parseFloat(i.variant.price || i.product.price) * i.quantity), 0);
 
+  const t = (key) => getTranslation(selectedLanguage, key);
+  const localizedProducts = products.map(p => getLocalizedProduct(p, selectedLanguage));
+  const localizedSelectedProduct = selectedProduct ? getLocalizedProduct(selectedProduct, selectedLanguage) : null;
+
   // Dedicated Product Checkout Page View
   if (isCheckoutPageActive && checkoutTarget?.product) {
     return (
@@ -351,6 +374,7 @@ export default function App() {
         quantity={checkoutTarget.quantity || 1}
         currentCountry={currentCountry}
         currencySymbol={currencySymbol}
+        selectedLanguage={selectedLanguage}
         onBack={() => {
           setIsCheckoutPageActive(false);
           setCheckoutTarget(null);
@@ -394,21 +418,21 @@ export default function App() {
             className="header-nav-link"
             style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: 0 }}
           >
-            Home
+            {t('home')}
           </button>
           <button 
             onClick={scrollToProducts} 
             className="header-nav-link"
             style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: 0 }}
           >
-            Catalog
+            {t('catalog')}
           </button>
           <button 
             onClick={() => setIsContactModalOpen(true)} 
             className="header-nav-link"
             style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: 0 }}
           >
-            Contact
+            {t('contact')}
           </button>
         </nav>
 
@@ -432,10 +456,17 @@ export default function App() {
             <span>{activeRegion.flag} {activeRegion.name} ({activeRegion.shortSymbol})</span>
           </button>
 
+          {/* Regional Language Switcher restricted to detected state */}
+          <LanguageDropdown 
+            detectedState={detectedState}
+            currentLanguage={selectedLanguage}
+            onSelectLanguage={setSelectedLanguage}
+          />
+
           {/* Search Button -> Opens Live Storefront Search */}
           <button 
             className="header-icon-btn" 
-            title="Search Products"
+            title={t('search_placeholder')}
             onClick={() => setIsSearchOpen(!isSearchOpen)}
           >
             <Search size={20} />
@@ -445,7 +476,7 @@ export default function App() {
           <button 
             onClick={() => setIsAccountModalOpen(true)}
             className="header-icon-btn" 
-            title="Customer Account"
+            title={t('account')}
           >
             <User size={20} />
           </button>
@@ -453,7 +484,7 @@ export default function App() {
           {/* Cart Bag Button -> Opens Cart Drawer */}
           <button 
             className="header-icon-btn" 
-            title="Shopping Cart"
+            title={t('cart')}
             onClick={() => setIsCartOpen(true)}
           >
             <ShoppingBag size={20} />
@@ -483,7 +514,7 @@ export default function App() {
               <Search size={22} color="#666" />
               <input 
                 type="text" 
-                placeholder="Search live offerings from NashikNirvana..." 
+                placeholder={t('search_placeholder')} 
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 autoFocus
@@ -547,7 +578,7 @@ export default function App() {
       >
         <div className="exact-hero-cta">
           <button onClick={scrollToProducts} className="btn-pill-dark">
-            Shop now
+            {t('shop_now')}
           </button>
         </div>
       </section>
@@ -568,10 +599,10 @@ export default function App() {
             </div>
             <div className="story-text-card">
               <h2>
-                Experience heartfelt pooja ceremonies and authentic Gangajal, delivered with warmth and reverence wherever your family gathers.
+                {t('story_title')}
               </h2>
               <p>
-                Born from a desire to keep ancestral traditions alive, we bridge continents by connecting your family to meaningful rituals and spiritual comfort.
+                {t('story_p')}
               </p>
             </div>
           </div>
@@ -596,13 +627,13 @@ export default function App() {
               }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }}></span>
                 {currentCountry === 'US' 
-                  ? 'United States Market • 1 Exclusive Offering Synced' 
-                  : 'India Market • 2 Exclusive Offerings Synced'}
+                  ? t('market_us_synced') 
+                  : t('market_in_synced')}
               </span>
             )}
           </div>
           <div className="exact-products-grid">
-            {products.map(prod => (
+            {localizedProducts.map(prod => (
               <div 
                 key={prod.id} 
                 className="exact-product-card"
@@ -626,7 +657,7 @@ export default function App() {
                   {currencySymbol}{prod.price}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.7)', marginTop: '4px' }}>
-                  {prod.availableForSale ? 'In stock • Ready for dispatch' : 'Out of stock'}
+                  {prod.availableForSale ? t('in_stock') : t('out_of_stock')}
                 </div>
 
                 <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -652,7 +683,7 @@ export default function App() {
                     onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
                     onMouseLeave={e => e.currentTarget.style.transform = 'none'}
                   >
-                    Book Ritual & Checkout • {currencySymbol}{prod.price}
+                    {t('book_ritual')} • {currencySymbol}{prod.price}
                   </button>
 
                   <button
@@ -676,7 +707,7 @@ export default function App() {
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.22)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'}
                   >
-                    + Add to Cart
+                    {t('add_to_cart')}
                   </button>
                 </div>
               </div>
@@ -688,12 +719,12 @@ export default function App() {
       {/* 5. Section 4: "Every detail considered" Banner (Exact Match) */}
       <section className="exact-detail-banner">
         <div className="site-container">
-          <h2>Every detail considered</h2>
+          <h2>{t('detail_title')}</h2>
           <p>
-            Our premium Gangajal and curated prayer kits deliver the essence of tradition, with every ritual guided by trusted priests in India.
+            {t('detail_p')}
           </p>
           <button onClick={scrollToProducts} className="btn-pill-dark">
-            Shop now
+            {t('shop_now')}
           </button>
         </div>
       </section>
@@ -705,14 +736,14 @@ export default function App() {
             ☆ ☆ ☆ ☆ ☆
           </div>
           <p className="quote-terracotta-text">
-            We honor the spirit of homecoming by making sacred traditions accessible, inviting every family to rediscover comfort in meaningful ritual.
+            {t('quote_terracotta')}
           </p>
           <button 
             onClick={scrollToProducts} 
             className="quote-shop-link"
             style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: 0 }}
           >
-            Shop now <span>→</span>
+            {t('shop_now_arrow')}
           </button>
         </div>
       </section>
@@ -733,17 +764,15 @@ export default function App() {
             </div>
             <div>
               <p className="quote-sand-text">
-                Each ceremony is a tapestry of memory and meaning — woven for modern life, yet rooted in centuries of reverence and togetherness.
+                {t('quote_sand')}
               </p>
             </div>
           </div>
         </div>
       </section>
 
-
-
       {/* Product Quick View / Detail Modal */}
-      {selectedProduct && (
+      {localizedSelectedProduct && (
         <div className="modal-overlay" onClick={() => setSelectedProduct(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <button 
@@ -769,27 +798,27 @@ export default function App() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px', padding: '36px' }}>
               <div style={{ borderRadius: '12px', overflow: 'hidden', aspectRatio: '1/1', background: '#f5f5f5' }}>
-                <img src={selectedProduct.image} alt={selectedProduct.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={localizedSelectedProduct.image} alt={localizedSelectedProduct.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h2 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: '8px', lineHeight: 1.25 }}>
-                  {selectedProduct.title}
+                  {localizedSelectedProduct.title}
                 </h2>
                 <div style={{ fontSize: '1.35rem', fontWeight: 600, color: 'var(--color-terracotta)', marginBottom: '8px' }}>
-                  {currencySymbol}{selectedProduct.price}
+                  {currencySymbol}{localizedSelectedProduct.price}
                 </div>
                 <div style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 600, marginBottom: '16px' }}>
-                  ✓ {selectedProduct.availableForSale ? 'Available in Shopify Inventory' : 'Sold Out'}
+                  ✓ {localizedSelectedProduct.availableForSale ? t('in_inventory') : t('sold_out')}
                 </div>
                 <p style={{ fontSize: '0.95rem', color: '#4b5563', lineHeight: 1.6, marginBottom: '24px' }}>
-                  {selectedProduct.description}
+                  {localizedSelectedProduct.description}
                 </p>
 
                 {/* Quantity Selector */}
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '8px' }}>
-                    Quantity
+                    {t('quantity')}
                   </label>
                   <div style={{
                     display: 'inline-flex',
@@ -826,7 +855,7 @@ export default function App() {
                     className="btn-pill-dark"
                     style={{ width: '100%', padding: '14px', fontSize: '1.02rem', opacity: selectedProduct.availableForSale ? 1 : 0.6 }}
                   >
-                    {selectedProduct.availableForSale ? `Add to cart • ${currencySymbol}${(parseFloat(selectedProduct.price) * modalQuantity).toFixed(2)}` : 'Out of Stock'}
+                    {selectedProduct.availableForSale ? `${t('add_to_cart')} • ${currencySymbol}${(parseFloat(selectedProduct.price) * modalQuantity).toFixed(2)}` : t('sold_out')}
                   </button>
 
                   <button 
@@ -849,7 +878,7 @@ export default function App() {
                       opacity: selectedProduct.availableForSale ? 1 : 0.6
                     }}
                   >
-                    Proceed to Dedicated Checkout →
+                    {t('proceed_dedicated_checkout')}
                   </button>
                 </div>
 
@@ -870,7 +899,7 @@ export default function App() {
               alignItems: 'center',
               justifyContent: 'space-between'
             }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Your cart ({totalCartCount})</h3>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{t('cart')} ({totalCartCount})</h3>
               <button 
                 onClick={() => setIsCartOpen(false)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
@@ -883,14 +912,14 @@ export default function App() {
               {cartItems.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 0', color: '#6b7280' }}>
                   <ShoppingBag size={48} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
-                  <p style={{ fontSize: '1.1rem', fontWeight: 500, color: '#111', marginBottom: '6px' }}>Your cart is empty</p>
-                  <p style={{ fontSize: '0.9rem', marginBottom: '20px' }}>Discover our sacred Godavari offerings to get started.</p>
+                  <p style={{ fontSize: '1.1rem', fontWeight: 500, color: '#111', marginBottom: '6px' }}>{t('cart_empty')}</p>
+                  <p style={{ fontSize: '0.9rem', marginBottom: '20px' }}>{t('cart_empty_sub')}</p>
                   <button 
                     onClick={() => { setIsCartOpen(false); scrollToProducts(); }}
                     className="btn-pill-dark"
                     style={{ padding: '10px 24px', fontSize: '0.9rem' }}
                   >
-                    Explore Offerings
+                    {t('explore_offerings')}
                   </button>
                 </div>
               ) : (
@@ -898,7 +927,7 @@ export default function App() {
                   <div key={idx} style={{ display: 'flex', gap: '16px', paddingBottom: '16px', borderBottom: '1px solid #f3f4f6', alignItems: 'center' }}>
                     <img src={item.product.image} alt={item.product.title} style={{ width: '70px', height: '70px', borderRadius: '8px', objectFit: 'cover' }} />
                     <div style={{ flexGrow: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '4px' }}>{item.product.title}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '4px' }}>{getLocalizedProduct(item.product, selectedLanguage).title}</div>
                       <div style={{ color: '#4b5563', fontSize: '0.9rem', marginBottom: '8px' }}>{currencySymbol}{item.variant.price || item.product.price}</div>
                       
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -932,11 +961,11 @@ export default function App() {
             {cartItems.length > 0 && (
               <div style={{ padding: '24px', borderTop: '1px solid #e5e7eb', background: '#fafafa' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px' }}>
-                  <span>Subtotal</span>
+                  <span>{t('subtotal')}</span>
                   <span>{currencySymbol}{cartSubtotal.toFixed(2)}</span>
                 </div>
                 <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '16px' }}>
-                  Taxes and shipping calculated at checkout
+                  {t('taxes_shipping_note')}
                 </p>
                 <button 
                   onClick={handleCheckout}
@@ -947,10 +976,10 @@ export default function App() {
                   {isCheckingOut ? (
                     <>
                       <Loader2 size={18} className="flame-anim" />
-                      <span>Creating Shopify Checkout...</span>
+                      <span>{t('creating_checkout')}</span>
                     </>
                   ) : (
-                    'Check out'
+                    t('checkout')
                   )}
                 </button>
               </div>
@@ -966,7 +995,7 @@ export default function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <MapPin size={22} color="var(--color-terracotta)" />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Verified Region: {activeRegion.name}</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{t('verified_region')}: {activeRegion.name}</h3>
               </div>
               <button onClick={() => setIsCurrencyModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={20} />
@@ -1014,7 +1043,7 @@ export default function App() {
             </div>
 
             <button onClick={() => setIsCurrencyModalOpen(false)} className="btn-pill-dark" style={{ marginTop: '24px', width: '100%', padding: '12px' }}>
-              Understood
+              {t('understood')}
             </button>
           </div>
         </div>
@@ -1025,7 +1054,7 @@ export default function App() {
         <div className="modal-overlay" onClick={() => setIsAccountModalOpen(false)}>
           <div className="modal-content" style={{ maxWidth: '440px', padding: '32px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Customer Account</h3>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>{t('account')}</h3>
               <button onClick={() => setIsAccountModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
@@ -1078,7 +1107,7 @@ export default function App() {
         <div className="modal-overlay" onClick={() => setIsContactModalOpen(false)}>
           <div className="modal-content" style={{ maxWidth: '520px', padding: '32px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Contact NashikNirvana</h3>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>{t('contact_title')}</h3>
               <button onClick={() => setIsContactModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
@@ -1091,7 +1120,7 @@ export default function App() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Phone size={18} color="var(--color-terracotta)" />
-                <span>WhatsApp Pooja Support: +91 98230 44550</span>
+                <span>{t('pooja_support')}: +91 98230 44550</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Mail size={18} color="var(--color-terracotta)" />
@@ -1130,7 +1159,7 @@ export default function App() {
                 className="btn-pill-dark" 
                 style={{ padding: '14px', marginTop: '6px' }}
               >
-                {contactSubmitted ? 'Submitting...' : 'Send Pooja Inquiry'}
+                {contactSubmitted ? 'Submitting...' : t('send_inquiry')}
               </button>
             </form>
           </div>
@@ -1142,7 +1171,7 @@ export default function App() {
         <div className="modal-overlay" onClick={() => setIsPolicyOpen(false)}>
           <div className="modal-content" style={{ maxWidth: '600px', padding: '32px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Terms and Policies</h3>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>{t('terms_title')}</h3>
               <button onClick={() => setIsPolicyOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
@@ -1153,7 +1182,7 @@ export default function App() {
               <p><strong>Refunds & Cancellations:</strong> Ritual services cannot be canceled once the Sankalpa has been initiated by the priest.</p>
             </div>
             <button onClick={() => setIsPolicyOpen(false)} className="btn-pill-dark" style={{ marginTop: '24px', width: '100%', padding: '12px' }}>
-              Close
+              {t('close')}
             </button>
           </div>
         </div>

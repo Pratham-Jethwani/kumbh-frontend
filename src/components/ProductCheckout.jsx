@@ -11,6 +11,7 @@ import {
   Truck,
   Video
 } from 'lucide-react';
+import { getTranslation, getLocalizedProduct } from '../translations';
 
 const COUNTRY_DIAL_CODES = [
   { code: '+91', country: 'IN', label: 'India (+91)' },
@@ -25,15 +26,18 @@ const COUNTRY_DIAL_CODES = [
 ];
 
 export default function ProductCheckout({ 
-  product, 
+  product: rawProduct, 
   quantity = 1,
   currentCountry = 'IN',
   currencySymbol = 'Rs. ',
+  selectedLanguage = 'en',
   onBack, 
   onCompleteCheckout,
   isProcessing = false 
 }) {
-  const titleLower = (product?.title || '').toLowerCase();
+  const product = getLocalizedProduct(rawProduct, selectedLanguage);
+  const t = (key) => getTranslation(selectedLanguage, key);
+  const titleLower = (rawProduct?.title || '').toLowerCase();
 
   // Exactly as requested:
   // "Sacred Godavari Jal & Kumbh Darshan Experience" is physical -> requires address and mobile number.
@@ -183,7 +187,7 @@ export default function ProductCheckout({
             }}
           >
             <ArrowLeft size={16} />
-            <span>Return to store</span>
+            <span>{t('return_to_store')}</span>
           </button>
 
           <div style={{ textAlign: 'center' }}>
@@ -201,7 +205,7 @@ export default function ProductCheckout({
             fontWeight: 500
           }}>
             <Lock size={14} />
-            <span>Secure Checkout</span>
+            <span>{t('secure_checkout')}</span>
           </div>
         </div>
       </header>
@@ -229,13 +233,13 @@ export default function ProductCheckout({
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
                   <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#391604', margin: 0 }}>
-                    {isPhysicalProduct ? 'Contact & Delivery Details' : 'Devotee Contact Information'}
+                    {isPhysicalProduct ? t('contact_delivery_details') : t('devotee_contact_info')}
                   </h2>
                   <span style={{ fontSize: '0.78rem', color: isPhysicalProduct ? '#b45309' : '#059669', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
                     {isPhysicalProduct ? (
-                      <><Truck size={14} /> Physical Delivery</>
+                      <><Truck size={14} /> {t('physical_delivery_badge')}</>
                     ) : (
-                      <><Video size={14} /> WhatsApp Delivery</>
+                      <><Video size={14} /> {t('whatsapp_delivery_badge')}</>
                     )}
                   </span>
                 </div>
@@ -245,7 +249,7 @@ export default function ProductCheckout({
                   {/* Full Name */}
                   <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a2c17', marginBottom: '6px' }}>
-                      Full Name <span style={{ color: '#dc2626' }}>*</span>
+                      {t('full_name')} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
                     <div style={{ position: 'relative' }}>
                       <User size={16} color="#9c7a60" style={{ position: 'absolute', left: '12px', top: '13px' }} />
@@ -256,7 +260,7 @@ export default function ProductCheckout({
                           setCustomerName(e.target.value);
                           if (errors.customerName) setErrors(prev => ({ ...prev, customerName: null }));
                         }}
-                        placeholder="Enter full name"
+                        placeholder={t('full_name_placeholder')}
                         style={{
                           width: '100%',
                           padding: '11px 14px 11px 38px',
@@ -279,7 +283,7 @@ export default function ProductCheckout({
                   {/* Email */}
                   <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a2c17', marginBottom: '6px' }}>
-                      Email Address (for order confirmation) <span style={{ color: '#dc2626' }}>*</span>
+                      {t('email_address')} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
                     <div style={{ position: 'relative' }}>
                       <Mail size={16} color="#9c7a60" style={{ position: 'absolute', left: '12px', top: '13px' }} />
@@ -313,7 +317,7 @@ export default function ProductCheckout({
                   {/* Phone / WhatsApp */}
                   <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a2c17', marginBottom: '6px' }}>
-                      {isPhysicalProduct ? 'Valid Mobile Number' : 'Valid WhatsApp Number'} <span style={{ color: '#dc2626' }}>*</span>
+                      {isPhysicalProduct ? t('valid_mobile_number') : t('valid_whatsapp_number')} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <select
@@ -343,7 +347,7 @@ export default function ProductCheckout({
                             setPhoneNumber(e.target.value);
                             if (errors.phoneNumber) setErrors(prev => ({ ...prev, phoneNumber: null }));
                           }}
-                          placeholder={isPhysicalProduct ? "10-digit mobile number" : "10-digit WhatsApp number"}
+                          placeholder={isPhysicalProduct ? t('phone_placeholder_mobile') : t('phone_placeholder_whatsapp')}
                           style={{
                             width: '100%',
                             padding: '11px 14px 11px 38px',
@@ -364,8 +368,8 @@ export default function ProductCheckout({
                     ) : (
                       <div style={{ fontSize: '0.75rem', color: '#7a5a41', marginTop: '4px' }}>
                         {isPhysicalProduct 
-                          ? 'Used for courier delivery updates and dispatch notification.' 
-                          : 'Your sacred ritual darshan video will be shared directly to this WhatsApp number.'}
+                          ? t('phone_helper_physical') 
+                          : t('phone_helper_digital')}
                       </div>
                     )}
                   </div>
@@ -385,7 +389,7 @@ export default function ProductCheckout({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
                     <MapPin size={18} color="#984b24" />
                     <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#391604', margin: 0 }}>
-                      Delivery Address
+                      {t('delivery_address')}
                     </h2>
                   </div>
 
@@ -394,7 +398,7 @@ export default function ProductCheckout({
                     {/* Address Line 1 */}
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a2c17', marginBottom: '6px' }}>
-                        Street Address / Flat / House No. <span style={{ color: '#dc2626' }}>*</span>
+                        {t('street_address')} <span style={{ color: '#dc2626' }}>*</span>
                       </label>
                       <input 
                         type="text"
@@ -403,7 +407,7 @@ export default function ProductCheckout({
                           setAddressLine1(e.target.value);
                           if (errors.addressLine1) setErrors(prev => ({ ...prev, addressLine1: null }));
                         }}
-                        placeholder="House number, apartment name, street"
+                        placeholder={t('street_placeholder')}
                         style={{
                           width: '100%',
                           padding: '11px 14px',
@@ -425,13 +429,13 @@ export default function ProductCheckout({
                     {/* Address Line 2 */}
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a2c17', marginBottom: '6px' }}>
-                        Apartment, suite, landmark (Optional)
+                        {t('apartment_landmark')}
                       </label>
                       <input 
                         type="text"
                         value={addressLine2}
                         onChange={e => setAddressLine2(e.target.value)}
-                        placeholder="Landmark or additional directions"
+                        placeholder={t('apartment_placeholder')}
                         style={{
                           width: '100%',
                           padding: '11px 14px',
@@ -449,7 +453,7 @@ export default function ProductCheckout({
                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '12px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a2c17', marginBottom: '6px' }}>
-                          City <span style={{ color: '#dc2626' }}>*</span>
+                          {t('city')} <span style={{ color: '#dc2626' }}>*</span>
                         </label>
                         <input 
                           type="text"
@@ -458,7 +462,7 @@ export default function ProductCheckout({
                             setCity(e.target.value);
                             if (errors.city) setErrors(prev => ({ ...prev, city: null }));
                           }}
-                          placeholder="City"
+                          placeholder={t('city')}
                           style={{
                             width: '100%',
                             padding: '11px 14px',
@@ -479,13 +483,13 @@ export default function ProductCheckout({
 
                       <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a2c17', marginBottom: '6px' }}>
-                          State
+                          {t('state')}
                         </label>
                         <input 
                           type="text"
                           value={stateName}
                           onChange={e => setStateName(e.target.value)}
-                          placeholder="State"
+                          placeholder={t('state')}
                           style={{
                             width: '100%',
                             padding: '11px 14px',
@@ -501,7 +505,7 @@ export default function ProductCheckout({
 
                       <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#4a2c17', marginBottom: '6px' }}>
-                          PIN Code <span style={{ color: '#dc2626' }}>*</span>
+                          {t('pin_code')} <span style={{ color: '#dc2626' }}>*</span>
                         </label>
                         <input 
                           type="text"
@@ -510,7 +514,7 @@ export default function ProductCheckout({
                             setPostalCode(e.target.value);
                             if (errors.postalCode) setErrors(prev => ({ ...prev, postalCode: null }));
                           }}
-                          placeholder="PIN Code"
+                          placeholder={t('pin_code')}
                           style={{
                             width: '100%',
                             padding: '11px 14px',
@@ -558,17 +562,17 @@ export default function ProductCheckout({
                 }}
               >
                 {isProcessing ? (
-                  <span>Processing Checkout...</span>
+                  <span>{t('processing_checkout')}</span>
                 ) : (
                   <>
                     <Lock size={16} />
-                    <span>Proceed to Payment • {currencySymbol}{totalPrice}</span>
+                    <span>{t('proceed_payment')} • {currencySymbol}{totalPrice}</span>
                   </>
                 )}
               </button>
 
               <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.78rem', color: '#7a5a41' }}>
-                Secure 256-Bit SSL Encrypted Payment
+                {t('encrypted_note')}
               </div>
 
             </form>
@@ -584,7 +588,7 @@ export default function ProductCheckout({
               boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
             }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#391604', margin: '0 0 16px 0', borderBottom: '1px solid #f0e9e1', paddingBottom: '10px' }}>
-                Order Summary
+                {t('order_summary')}
               </h3>
 
               {/* Item Card */}
@@ -608,7 +612,7 @@ export default function ProductCheckout({
                     {product?.title}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#886242', marginTop: '3px' }}>
-                    Qty: {quantity}
+                    {t('qty')}: {quantity}
                   </div>
                 </div>
                 <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#984b24' }}>
@@ -619,12 +623,12 @@ export default function ProductCheckout({
               {/* Pricing breakdown */}
               <div style={{ borderTop: '1px solid #f0e9e1', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.88rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#684a32' }}>
-                  <span>Subtotal</span>
+                  <span>{t('subtotal')}</span>
                   <span>{currencySymbol}{totalPrice}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#684a32' }}>
-                  <span>Delivery</span>
-                  <span style={{ color: '#16a34a', fontWeight: 600 }}>FREE</span>
+                  <span>{t('physical_delivery_badge')}</span>
+                  <span style={{ color: '#16a34a', fontWeight: 600 }}>{t('free_delivery')}</span>
                 </div>
                 <div style={{
                   borderTop: '1px solid #e7ded5',
@@ -636,7 +640,7 @@ export default function ProductCheckout({
                   fontWeight: 800,
                   color: '#271206'
                 }}>
-                  <span>Total</span>
+                  <span>{t('total')}</span>
                   <span style={{ color: '#984b24' }}>{currencySymbol}{totalPrice}</span>
                 </div>
               </div>
@@ -653,7 +657,7 @@ export default function ProductCheckout({
                 color: '#7a5a41'
               }}>
                 <ShieldCheck size={14} color="#984b24" />
-                <span>Authentic Kumbh Seva • Level 1 PCI-DSS Secure</span>
+                <span>{t('trust_pci')}</span>
               </div>
 
             </div>
